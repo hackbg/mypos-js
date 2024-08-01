@@ -1,6 +1,6 @@
 'use strict';
 
-const request = require('request');
+const request = require('@cypress/request');
 const uuidv4 = require('uuid/v4');
 const logger = require('../../utils/logger');
 const AuthToken = require('../auth/auth-token');
@@ -102,7 +102,7 @@ class ApiRequest {
         const sendReq = () => {
             logger.debug(`Sending HTTP request with options: ${JSON.stringify(this.options)}`);
 
-            request(this.options,(err, res, body) => {
+            request(this.options, (err, res, body) => {
                 if (err !== undefined && err !== null) {
                     logger.error(err);
                     callback(err);
@@ -127,7 +127,7 @@ class ApiRequest {
             }
 
             if (this.mypos.token === undefined || this.mypos.token.isExpired) {
-                generateAuthToken(this.mypos,() => {
+                generateAuthToken(this.mypos, () => {
                     if (this.mypos.token.error !== undefined) {
                         logger.debug(`Could not generate token. ${this.mypos.token.error}`);
                         this.mypos.setToken(undefined);
