@@ -18,7 +18,7 @@ class CheckoutApiRequest {
     }
 
     get host() {
-        return this.mypos.config.isSandbox ? 'https://www.mypos.eu/vmp/checkout-test' : 'https://www.mypos.eu/vmp/checkout';
+        return this.mypos.config.isSandbox ? 'https://www.mypos.com/vmp/checkout-test' : 'https://www.mypos.com/vmp/checkout';
     }
 
     send = (handler) => {
