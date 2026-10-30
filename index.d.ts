@@ -104,6 +104,12 @@ declare namespace MyPos {
   interface RequestOptions {
     /** Default 15000. */
     timeoutMs?: number
+    /**
+     * Reject a reply whose signature does not verify against
+     * checkout.publicCertificate. Default false. A valid signature proves the
+     * reply came from myPOS, not that an order was paid.
+     */
+    verifySignature?: boolean
   }
 
   /** The common envelope of a Checkout API reply. Status 0 means success. */

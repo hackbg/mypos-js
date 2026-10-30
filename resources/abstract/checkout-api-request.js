@@ -66,8 +66,13 @@ class CheckoutApiRequest {
      * asks for OutputFormat JSON), and rejects on a network error, a timeout, a
      * non-2xx status or a body that is not JSON. A reply with a non-zero
      * `Status` is still resolved: what that means is the caller's decision.
+     *
+     * With `verifySignature: true` it also rejects a reply whose signature
+     * does not verify against checkout.publicCertificate. A valid signature
+     * only proves myPOS sent the reply, not that the order was paid (see the
+     * README).
      */
-    async post({ timeoutMs = 15000 } = {}) {
+    async post({ timeoutMs = 15000, verifySignature = false } = {}) {
         const { action, fields } = this.form();
         const response = await fetch(action, {
             method: 'POST',
@@ -76,18 +81,29 @@ class CheckoutApiRequest {
             signal: AbortSignal.timeout(timeoutMs),
         });
         const text = await response.text();
+        let body;
 
         if (!response.ok) {
             throw new Error(`myPOS ${this.params.IPCmethod} failed with HTTP ${response.status}: ${text.slice(0, 200)}`);
         }
 
         try {
-            const body = JSON.parse(text);
-            this.logger.debug(`myPOS ${this.params.IPCmethod} replied: ${text}`);
-            return body;
+            body = JSON.parse(text);
         } catch (err) {
             throw new Error(`myPOS ${this.params.IPCmethod} returned a non-JSON reply: ${text.slice(0, 200)}`);
         }
+        this.logger.debug(`myPOS ${this.params.IPCmethod} replied: ${text}`);
+
+        if (verifySignature) {
+            const certificate = (this.mypos.config.checkout || {}).publicCertificate;
+            if (!certificate) {
+                throw new Error('myPOS: verifySignature needs checkout.publicCertificate');
+            }
+            if (!signature.verify(Object.entries(body), certificate)) {
+                throw new Error(`myPOS ${this.params.IPCmethod} reply failed signature verification`);
+            }
+        }
+        return body;
     }
 
     send = (handler) => {

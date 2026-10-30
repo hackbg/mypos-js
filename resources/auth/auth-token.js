@@ -36,6 +36,11 @@ class AuthToken {
     }
 
     get isExpired() {
+        // A token without a usable lifetime counts as expired, so it is
+        // replaced rather than reused forever (NaN never compares as later).
+        if (!Number.isFinite(this.expiresAt)) {
+            return true;
+        }
         // A minute early, so a token is not sent in the instant it lapses.
         return nowSeconds() > this.expiresAt - 60;
     }

@@ -13,6 +13,10 @@ Maintained fork of developermypos/mypos-js 0.0.5.
 - `checkout.verifySignature(data, publicCertificate?)` for IPCPurchaseNotify,
   IPCPurchaseOK and server replies. `checkout.publicCertificate` is the default
   certificate.
+- `{ verifySignature: true }` option on the server-to-server calls: rejects a
+  reply whose signature does not verify against `checkout.publicCertificate`.
+- README: what `verifySignature` does and does not prove, and how the sandbox's
+  `IPCGetPaymentStatus` reports any order as paid.
 - TypeScript declarations (`index.d.ts`) and a test suite (`npm test`).
 
 ### Fixed
@@ -26,6 +30,12 @@ Maintained fork of developermypos/mypos-js 0.0.5.
   They are now omitted.
 - Amounts are sent with two decimals. `Amount_N` was a float product, e.g.
   `59.97000000000001` for 3 x 19.99.
+- An OAuth token without a usable `expires_in` was never treated as expired.
+- Amounts rounded half cents through the binary float (1.005 became 1.00).
+  They now round decimally, halves away from zero.
+- The semi-integrated device request logged the full request, API key included,
+  and ignored `logLevel`. It now uses the instance logger and leaves the key and
+  signature out.
 - Instances shared one configuration object, so a second `MyPos(...)` call
   overwrote the first one's settings.
 - `logLevel` was ignored and everything was logged, including bearer tokens and

@@ -7,6 +7,10 @@ const crypto = require('crypto');
 const MyPos = require('../mypos');
 const AuthToken = require('../resources/auth/auth-token');
 const CreateWebHookRequest = require('../resources/webHooks/create-webhook');
+const BasePOSRequest = require('../resources/devices/semi-integrated/base-request');
+const signature = require('../utils/signature');
+const { money } = require('../utils/common');
+const net = require('net');
 
 const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
     modulusLength: 1024,
@@ -188,4 +192,54 @@ test('creating a webhook sends the payload URL and the secret in the right field
     const request = new CreateWebHookRequest(sdk(), 'https://shop.example/hook', 's3cret');
 
     assert.deepEqual(request.reqData, { payload_url: 'https://shop.example/hook', secret: 's3cret' });
+});
+
+test('post({ verifySignature: true }) accepts a signed reply and rejects a tampered or unsigned one', async (t) => {
+    const reply = [['IPCMethod', 'IPCGetPaymentStatus'], ['OrderID', 'order-1'], ['PaymentStatus', '1'], ['Amount', '62.42']];
+    const signed = Object.fromEntries([...reply, ['Signature', signature.sign(reply, privateKey)]]);
+    const replies = [signed, { ...signed, Amount: '1.00' }, Object.fromEntries(reply)];
+    t.mock.method(global, 'fetch', async () => new Response(JSON.stringify(replies.shift()), { status: 200 }));
+
+    const mypos = sdk();
+    assert.equal((await mypos.checkout.paymentStatus({ orderId: 'order-1' }, { verifySignature: true })).Amount, '62.42');
+    await assert.rejects(mypos.checkout.paymentStatus({ orderId: 'order-1' }, { verifySignature: true }), /signature verification/);
+    await assert.rejects(mypos.checkout.paymentStatus({ orderId: 'order-1' }, { verifySignature: true }), /signature verification/);
+});
+
+test('post({ verifySignature: true }) refuses to run without a certificate', async (t) => {
+    t.mock.method(global, 'fetch', async () => new Response('{}', { status: 200 }));
+
+    await assert.rejects(
+        sdk({ publicCertificate: undefined }).checkout.paymentStatus({ orderId: 'x' }, { verifySignature: true }),
+        /needs checkout.publicCertificate/
+    );
+});
+
+test('an OAuth token without a usable lifetime counts as expired', () => {
+    assert.equal(new AuthToken({ access_token: 't' }).isExpired, true);
+    assert.equal(new AuthToken({ access_token: 't', expires_in: 'soon' }).isExpired, true);
+});
+
+test('money rounds half cents the decimal way, symmetrically', () => {
+    assert.equal(money(1.005), '1.01');
+    assert.equal(money(-1.005), '-1.01');
+    assert.equal(money(2.675), '2.68');
+    assert.equal(money('11'), '11.00');
+    assert.throws(() => money(undefined), /invalid amount/);
+});
+
+test('the semi-integrated request does not log the API key', (t) => {
+    const lines = [];
+    const mypos = MyPos({ apiKey: 'live-key', apiSecret: 'secret', logLevel: 'debug' });
+    t.mock.method(console, 'log', (line) => lines.push(line));
+    t.mock.method(net.Socket.prototype, 'connect', function (port, host, onConnect) {
+        onConnect();
+        return this;
+    });
+    t.mock.method(net.Socket.prototype, 'write', () => true);
+
+    new BasePOSRequest(mypos, { method: 'Purchase', amount: '1.00' }).send(() => {});
+
+    assert.ok(lines.some((line) => /Sending data/.test(line)));
+    assert.ok(lines.every((line) => !line.includes('live-key')));
 });

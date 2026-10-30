@@ -92,15 +92,32 @@ const reversal = await mypos.checkout.reversePayment({ trnRef });
 // IPCPurchaseNotify / IPCPurchaseOK: check the signature against the myPOS
 // public certificate. Pass the parsed form body; field order is preserved.
 app.post('/notify', express.urlencoded({ extended: false }), (req, res) => {
-    if (!mypos.checkout.verifySignature(req.body)) {
-        return res.status(400).send('Invalid signature');
+    if (!mypos.checkout.verifySignature(req.body) || req.body.IPCmethod !== 'IPCPurchaseNotify') {
+        return res.status(400).send('Invalid notification');
     }
-    // ...mark the order paid...
+    // Look the order up by OrderID and compare Amount and Currency with what
+    // you charged, then mark it paid. Do nothing if it is already paid.
     res.type('text/plain').send('OK');
 });
 ```
 
-**Deciding whether an order was paid.** Check `PaymentStatus === 1` *and* that `OrderID`, `Amount` and `Currency` match the order, and verify the reply's signature when you have the certificate (`mypos.checkout.verifySignature(Object.entries(reply))`). Do not rely on `StatusMsg === 'Success'` or on `Status`: asked about an order that does not exist, the sandbox replies `PaymentStatus: "1"`, `Amount: "11.00"`, `Status: 1`, `StatusMsg: "Success"` (observed 2026-10-30).
+**Deciding whether an order was paid.** In production, check `PaymentStatus === "1"` *and* that `OrderID`, `Amount` and `Currency` match the order, and verify the reply's signature (`paymentStatus({ orderId }, { verifySignature: true })`, or `verifySignature(Object.entries(reply))`). Do not rely on `StatusMsg === 'Success'` or on `Status`.
+
+**The sandbox reports every order as paid.** In the test environment `IPCGetPaymentStatus` answers `PaymentStatus: "1"`, `StatusMsg: "Success"` with a valid myPOS signature and the requested `OrderID` echoed back, for *any* order: one myPOS has never seen, a checkout that was handed off and abandoned, and a payment the hosted page itself declared unsuccessful. The `Amount` is a random whole number (observed 2.00 to 19.00 EUR), different on every call. So in the sandbox:
+
+- signature, `OrderID`, `Currency` and `PaymentStatus` checks all pass for an unpaid order;
+- only the amount check catches it, and only probabilistically: anyone who can make your server repeat the status query can retry until the random amount matches a small order;
+- a sandbox status reply is therefore never evidence of payment. Do not let anything that settles orders trust it while `isSandbox` is on, and do not use the sandbox to test your "not paid" path through this call.
+
+(Observed 2026-10-30 with the public test store. Production behaviour for unknown or unpaid orders was not tested.) The signed `IPCPurchaseNotify` callback to `URL_Notify` is the stronger settlement signal: myPOS sends it for completed payments, and a payment fails if that URL does not answer `OK`.
+
+**What `verifySignature` proves.** myPOS signs the field *values* only, in order, joined with `-`. Field names and the message type are not signed, so a valid signature proves that myPOS produced this sequence of values at some point, nothing more. In particular:
+
+- the customer's browser receives a signed `IPCPurchaseOK` for their own order and can replay it, including to your `URL_Notify` handler. Check `IPCmethod` is the message you expect on that endpoint;
+- check `OrderID`, `Amount` and `Currency` against your own record of the order, never trust them from the message alone;
+- treat settlement as idempotent: a second valid notification for an order that is already paid must change nothing.
+
+**Logging.** `logLevel: 'debug'` logs full request fields (customer names, emails, addresses) and full myPOS replies. Use it in development only. Auth headers, OAuth tokens and API keys are never logged at any level.
 
 Each server-to-server call rejects on a network error, a timeout (15 s by default, `{ timeoutMs }` to change) or a reply that is not JSON. A reply with a non-zero `Status` resolves: check it.
 

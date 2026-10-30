@@ -3,7 +3,6 @@
 const net = require('net');
 const { randomUUID } = require('crypto');
 const crypto = require('../../../utils/crypto');
-const logger = require('../../../utils/logger');
 
 class BasePOSRequest {
     constructor(mypos, params) {
@@ -21,6 +20,10 @@ class BasePOSRequest {
 
     get isValid() {
         return true;
+    }
+
+    get logger() {
+        return this.mypos.logger;
     }
 
     get config() {
@@ -48,13 +51,15 @@ class BasePOSRequest {
 
         let client = new net.Socket();
         client.connect(this.config.port, this.config.host, () => {
-            logger.debug('Connected to Semi Integrated API');
+            this.logger.debug('Connected to Semi Integrated API');
             let data = JSON.stringify(params);
-            logger.debug(`Sending data to Semi Integrated API: ${data}`);
+            // The API key is a credential: never written to the log.
+            const { api_key, signature, ...loggable } = params;
+            this.logger.debug(`Sending data to Semi Integrated API: ${JSON.stringify(loggable)}`);
             client.write(data);
         });
         client.on('data', (data) => {
-            logger.debug('Received data from Semi Integrated API: ' + data);
+            this.logger.debug('Received data from Semi Integrated API: ' + data);
             const response = JSON.parse(data);
             const status = parseInt(response['status']);
 
@@ -66,7 +71,7 @@ class BasePOSRequest {
             callback(response);
         });
         client.on('close', () => {
-            logger.debug('Closed connection to Semi Integrated API');
+            this.logger.debug('Closed connection to Semi Integrated API');
         });
     }
 }
