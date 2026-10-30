@@ -42,9 +42,31 @@ This is the [Hack.bg](https://hack.bg) maintained fork of [developermypos/mypos-
 Requires Node.js 18.17 or later.
 
 ### Install from GitHub
-```npm i github:hackbg/mypos-js```
+```npm i github:hackbg/mypos-js#v0.1.0```
 
-Pin a commit (`github:hackbg/mypos-js#<sha>`) for reproducible builds.
+Install a release tag rather than the default branch. npm records the tag's
+commit in `package-lock.json`, so installs stay reproducible. To accept
+compatible fixes on `npm update`, use a range instead:
+`github:hackbg/mypos-js#semver:^0.1.0`.
+
+### Versioning
+
+This package follows [Semantic Versioning](https://semver.org). Every release
+is a `vX.Y.Z` git tag with a GitHub release, and is listed in
+[CHANGELOG.md](CHANGELOG.md).
+
+While the version is `0.x`, a **minor** bump (0.1 to 0.2) may break the API and
+a **patch** bump (0.1.0 to 0.1.1) never does. npm's caret ranges already treat
+`0.x` this way: `^0.1.0` accepts 0.1.x but not 0.2.0. From 1.0.0 on, breaking
+changes need a major bump.
+
+Releasing:
+
+1. Move the `Unreleased` entries in CHANGELOG.md under the new version and date.
+2. Bump `version` in package.json (`npm version <patch|minor|major> --no-git-tag-version`).
+3. Merge to `master`, then tag the merge commit and publish the release:
+   `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`, then
+   `gh release create vX.Y.Z --notes-from-tag` (or paste the changelog section).
 
 TypeScript declarations are included.
 

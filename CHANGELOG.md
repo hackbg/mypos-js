@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.0
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0] - 2026-10-30
 
 Maintained fork of developermypos/mypos-js 0.0.5.
 
@@ -47,6 +53,10 @@ Maintained fork of developermypos/mypos-js 0.0.5.
   `Content-Type` when written to a response.
 
 ### Changed
+- HTTP client is `@cypress/request` instead of the deprecated `request`
+  (security advisories). Unreleased on master since 2024.
+- Checkout host is `www.mypos.com`, was `www.mypos.eu`. Unreleased on master
+  since 2024.
 - Types: `verifySignature` accepts `Object.entries(reply)` (values typed
   `unknown`), and reply envelopes type `IPCMethod`, as myPOS spells it.
 - Signing uses Node's `crypto` instead of `node-rsa`. Signatures are identical
@@ -62,3 +72,11 @@ Maintained fork of developermypos/mypos-js 0.0.5.
   changes what the browser posts and the signature no longer matches.
 - If you relied on `"undefined"` being posted for missing customer fields,
   those fields are now absent.
+
+## [0.0.5] - 2020-03-19
+
+Last release of the upstream developermypos/mypos-js.
+
+[Unreleased]: https://github.com/hackbg/mypos-js/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/hackbg/mypos-js/compare/v0.0.5...v0.1.0
+[0.0.5]: https://github.com/hackbg/mypos-js/releases/tag/v0.0.5
