@@ -100,6 +100,8 @@ app.post('/notify', express.urlencoded({ extended: false }), (req, res) => {
 });
 ```
 
+**Deciding whether an order was paid.** Check `PaymentStatus === 1` *and* that `OrderID`, `Amount` and `Currency` match the order, and verify the reply's signature when you have the certificate (`mypos.checkout.verifySignature(Object.entries(reply))`). Do not rely on `StatusMsg === 'Success'` or on `Status`: asked about an order that does not exist, the sandbox replies `PaymentStatus: "1"`, `Amount: "11.00"`, `Status: 1`, `StatusMsg: "Success"` (observed 2026-10-30).
+
 Each server-to-server call rejects on a network error, a timeout (15 s by default, `{ timeoutMs }` to change) or a reply that is not JSON. A reply with a non-zero `Status` resolves: check it.
 
 The callback-style methods below still work. Note that `purchase` renders a page that submits itself from an inline `onload` handler, which a Content Security Policy without `'unsafe-inline'` blocks, and that `refund`, `reversal` and `getPaymentStatus` only return a signed HTML form: they do not contact myPOS.
