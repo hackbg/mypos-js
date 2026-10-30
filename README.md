@@ -4,10 +4,13 @@
 
 This repository provides a native NodeJS SDK, which enables to integrate your solution with myPOS APIs such as Checkout, Transactions, Devices, Webhooks and more to come.
 
+This is the [Hack.bg](https://hack.bg) maintained fork of [developermypos/mypos-js](https://github.com/developermypos/mypos-js), which has not been updated since 2020. See [CHANGELOG.md](./CHANGELOG.md) for what changed.
+
 ### Table of Contents
 
 * [Installation](#installation)
 * [Checkout](#checkout)  
+  * [Hosted checkout, server-to-server calls and notifications](#hosted-checkout-server-to-server-calls-and-notifications)
   * [Purchase](#purchase)
   * [Refund](#refund)
   * [Reversal](#reversal)
@@ -36,15 +39,21 @@ This repository provides a native NodeJS SDK, which enables to integrate your so
   
 ## Installation
 
-### Install via NPM package manager
-```npm i @mypos-ltd/mypos```
+Requires Node.js 18.17 or later.
+
+### Install from GitHub
+```npm i github:hackbg/mypos-js```
+
+Pin a commit (`github:hackbg/mypos-js#<sha>`) for reproducible builds.
+
+TypeScript declarations are included.
 
 ## Checkout
 Before calling any of the Checkout API methods, you need to initialize the SDK.
 ```javascript
-const mypos = require('@mypos-ltd/mypos')({
+const mypos = require('@hackbg/mypos-js')({
     isSandbox: true,
-    logLevel: 'debug',                  // Logging level
+    logLevel: 'info',                   // debug, info, error or none. Debug logs full requests, customer data included.
     checkout: {                         // Checkout API specific configuration
         sid: '',                        // Stored ID
         lang: 'EN',                     // Preferred language
@@ -52,7 +61,7 @@ const mypos = require('@mypos-ltd/mypos')({
         clientNumber: '',               // Available in the myPOS Account
         okUrl: '',                      // Redirect URL on successful operation
         cancelUrl: '',                  // Redirect URL on cancelled operation
-        notifyUtr: '',                  // Callback URL to be notified on operation result
+        notifyUrl: '',                  // Callback URL to be notified on operation result (HTTPS, no port)
         cardTokenRequest: 0,            // View details at https://developers.mypos.eu/en/doc/online_payments/v1_4/21-purchase-with-payment-card-(api-call--ipcpurchase) 
         paymentMethod: 1,               // View details at https://developers.mypos.eu/en/doc/online_payments/v1_4/21-purchase-with-payment-card-(api-call--ipcpurchase)
         paymentParametersRequired: 3,   // https://developers.mypos.eu/en/doc/online_payments/v1_4/21-purchase-with-payment-card-(api-call--ipcpurchase)
@@ -61,10 +70,40 @@ const mypos = require('@mypos-ltd/mypos')({
             '...\n' +
             '...\n' +
             '...\n' +
-            '-----END RSA PRIVATE KEY-----'
+            '-----END RSA PRIVATE KEY-----',
+        publicCertificate: '-----BEGIN CERTIFICATE-----\n...', // myPOS public certificate, for verifySignature
     }
 });
 ```
+
+### Hosted checkout, server-to-server calls and notifications
+These return data instead of HTML, and are the recommended way to use the Checkout API.
+
+```javascript
+// The signed IPCPurchase fields and the URL to POST them to. Render them as a
+// form in your own page and submit it, keeping the fields in the given order.
+const { action, method, fields } = mypos.checkout.purchaseForm(purchaseParams);
+
+// Server-to-server, resolving with myPOS's parsed JSON reply.
+const status = await mypos.checkout.paymentStatus({ orderId });  // status.PaymentStatus: 1 paid, 2 pending, 3 failed, 4 reversed
+const refund = await mypos.checkout.refundPayment({ trnRef, amount: 9.99 });
+const reversal = await mypos.checkout.reversePayment({ trnRef });
+
+// IPCPurchaseNotify / IPCPurchaseOK: check the signature against the myPOS
+// public certificate. Pass the parsed form body; field order is preserved.
+app.post('/notify', express.urlencoded({ extended: false }), (req, res) => {
+    if (!mypos.checkout.verifySignature(req.body)) {
+        return res.status(400).send('Invalid signature');
+    }
+    // ...mark the order paid...
+    res.type('text/plain').send('OK');
+});
+```
+
+Each server-to-server call rejects on a network error, a timeout (15 s by default, `{ timeoutMs }` to change) or a reply that is not JSON. A reply with a non-zero `Status` resolves: check it.
+
+The callback-style methods below still work. Note that `purchase` renders a page that submits itself from an inline `onload` handler, which a Content Security Policy without `'unsafe-inline'` blocks, and that `refund`, `reversal` and `getPaymentStatus` only return a signed HTML form: they do not contact myPOS.
+
 ### Purchase
 #### Gathering purchase data.
 ```javascript
@@ -158,11 +197,11 @@ app.post('/getPaymentStatus', (req, res) => {
 
 The below APIs use a different type of authentication and require a much simpler way of initializing the SDK.
 ```javascript
-const mypos = require('mypos')({
+const mypos = require('@hackbg/mypos-js')({
     isSandbox: true,    // Whether to use the Sandbox environment
     apiKey: '',         // Generated via the myPOS Account
     apiSecret: '',      // Generated via the myPOS Account
-    logLevel: 'debug',  // Logging level
+    logLevel: 'info',   // Logging level
 });
 ```
 ## Transactions

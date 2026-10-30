@@ -1,7 +1,7 @@
 'use strict';
 
 const net = require('net');
-const uuidv4 = require('uuid/v4');
+const { randomUUID } = require('crypto');
 const crypto = require('../../../utils/crypto');
 const logger = require('../../../utils/logger');
 
@@ -43,7 +43,7 @@ class BasePOSRequest {
         let trnRef = params['trn_ref'];
 
         params['api_key'] = this.mypos.config.apiKey;
-        params['trn_ref'] = trnRef !== undefined && trnRef.trim().length > 0 ? trnRef : uuidv4();
+        params['trn_ref'] = trnRef !== undefined && trnRef.trim().length > 0 ? trnRef : randomUUID();
         params['signature'] = crypto.generateSignature(params, this.mypos.config.apiSecret);
 
         let client = new net.Socket();

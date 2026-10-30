@@ -8,6 +8,7 @@ class AuthToken {
         this._type = data.token_type;
         this._expiresIn = data.expires_in;
         this._error = data.error;
+        this._issuedAt = nowSeconds();
     }
 
     get token() {
@@ -23,7 +24,7 @@ class AuthToken {
     }
 
     get expiresAt() {
-        return currentTimestamp + this.expiresIn;
+        return this._issuedAt + this.expiresIn;
     }
 
     get error() {
@@ -35,7 +36,8 @@ class AuthToken {
     }
 
     get isExpired() {
-        return currentTimestamp > this.expiresAt;
+        // A minute early, so a token is not sent in the instant it lapses.
+        return nowSeconds() > this.expiresAt - 60;
     }
 
     get asJSON() {
@@ -50,6 +52,8 @@ class AuthToken {
     }
 }
 
-const currentTimestamp = parseInt(Date.now() / 1000);
+// Read on every call. This was a module-level constant, fixed at load time,
+// so a token never expired for as long as the process ran.
+const nowSeconds = () => Math.floor(Date.now() / 1000);
 
 module.exports = AuthToken;

@@ -1,9 +1,10 @@
+const express = require('express');
 const app = express();
-const uuidv4 = require('uuid/v4');
+const { randomUUID: uuidv4 } = require('crypto');
 const http = require('http');
 const path = require('path');
 
-const mypos = require('@mypos-ltd/mypos')({
+const mypos = require('@hackbg/mypos-js')({
     isSandbox: true,
     logLevel: 'debug',
     checkout: {
@@ -76,7 +77,7 @@ const purchaseParams = {
     note: 'Some note'
 };
 
-refundParams = (trnRef) => {
+const refundParams = (trnRef) => {
     return {
         orderId: uuidv4(),
         amount: 9.99,

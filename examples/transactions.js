@@ -1,4 +1,4 @@
-const mypos = require('@mypos-ltd/mypos')({
+const mypos = require('@hackbg/mypos-js')({
     isSandbox: true,
     logLevel: 'debug',
     apiKey: 'CLIENT_ID',
