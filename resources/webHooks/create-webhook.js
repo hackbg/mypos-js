@@ -3,7 +3,7 @@
 const WebHooksApiRequest = require('../abstract/webhooks-api-request');
 
 class CreateWebHookRequest extends WebHooksApiRequest {
-    constructor(mypos, reqData, payloadUrl, secret) {
+    constructor(mypos, payloadUrl, secret) {
         super(mypos,
             'POST',
             'webhooks',

@@ -1,5 +1,7 @@
 'use strict';
 
+const { createLogger } = require('./utils/logger');
+
 const defaultConfig = {
     logLevel: 'info',
     isSandbox: false
@@ -11,7 +13,10 @@ function MyPOS(config) {
     }
 
     this.token = undefined;
-    this.config = Object.assign(defaultConfig, config);
+    // A fresh object per instance. Assigning into defaultConfig itself made
+    // every instance share, and overwrite, the first one's settings.
+    this.config = Object.assign({}, defaultConfig, config);
+    this.logger = createLogger(this.config.logLevel);
 
     this.setToken = (token) => {
         this.token = token;

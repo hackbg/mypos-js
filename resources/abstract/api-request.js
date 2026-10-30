@@ -1,8 +1,7 @@
 'use strict';
 
 const request = require('@cypress/request');
-const uuidv4 = require('uuid/v4');
-const logger = require('../../utils/logger');
+const { randomUUID } = require('crypto');
 const AuthToken = require('../auth/auth-token');
 
 class ApiRequest {
@@ -51,6 +50,10 @@ class ApiRequest {
         return `${this.basePath}/${this.path}`;
     }
 
+    get logger() {
+        return this.mypos.logger;
+    }
+
     get apiKey() {
         return this.mypos.config.apiKey;
     }
@@ -68,7 +71,7 @@ class ApiRequest {
             'Accept': 'application/json',
             'API-Key': this.apiKey,
             'Content-Type': 'application/json',
-            'X-Request-ID': uuidv4(),
+            'X-Request-ID': randomUUID(),
         }
     }
 
@@ -100,11 +103,13 @@ class ApiRequest {
         }
 
         const sendReq = () => {
-            logger.debug(`Sending HTTP request with options: ${JSON.stringify(this.options)}`);
+            // Headers are left out: they carry the bearer token or the API secret.
+            const { headers, ...loggable } = this.options;
+            this.logger.debug(`Sending HTTP request with options: ${JSON.stringify(loggable)}`);
 
             request(this.options, (err, res, body) => {
                 if (err !== undefined && err !== null) {
-                    logger.error(err);
+                    this.logger.error(err);
                     callback(err);
                 }
                 else {
@@ -119,17 +124,13 @@ class ApiRequest {
         };
 
         if (!this.isGenerateToken) {
-            if (this.mypos.token !== undefined) {
-                logger.info(`oAuth Token is ${this.mypos.token.asJSON}`);
-            }
-            else {
-                logger.info('oAuth Token is N/A');
-            }
+            // Never the token itself: it is a bearer credential.
+            this.logger.debug(`oAuth token ${this.mypos.token === undefined ? 'absent' : 'present'}`);
 
             if (this.mypos.token === undefined || this.mypos.token.isExpired) {
                 generateAuthToken(this.mypos, () => {
                     if (this.mypos.token.error !== undefined) {
-                        logger.debug(`Could not generate token. ${this.mypos.token.error}`);
+                        this.logger.error(`Could not generate token. ${this.mypos.token.error}`);
                         this.mypos.setToken(undefined);
                         callback(null);
                     }
@@ -176,9 +177,17 @@ class GenerateTokenRequest extends AuthApiRequest {
 const generateAuthToken = (mypos, callback) => {
     let request = new GenerateTokenRequest(mypos);
     request.send((data) => {
-        logger.debug(`Token generation request returned: ${data}`);
-        mypos.setToken(new AuthToken(JSON.parse(data)));
-        console.log(mypos.token.asJSON);
+        // send() has already parsed a JSON body, so this is usually an object.
+        // Parsing it a second time threw, and no token was ever stored.
+        let parsed = data;
+        if (typeof data === 'string') {
+            try {
+                parsed = JSON.parse(data);
+            } catch (err) {
+                parsed = { error: data };
+            }
+        }
+        mypos.setToken(new AuthToken(parsed || { error: 'No response' }));
         callback();
     });
 };

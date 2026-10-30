@@ -5,6 +5,7 @@ const CheckoutPurchaseRequest = require('./resources/checkout/purchase');
 const CheckoutRefundRequest = require('./resources/checkout/refund');
 const CheckoutReversalRequest = require('./resources/checkout/reversal');
 const GetPaymentStatusRequest = require('./resources/checkout/get-payment-status');
+const signature = require('./utils/signature');
 
 // Devices
 const ListDevicesRequest = require('./resources/devices/list-devices');
@@ -55,6 +56,28 @@ module.exports = (mypos) => {
         getPaymentStatus: (params, callback) => {
             new GetPaymentStatusRequest(mypos, params).send(callback);
         },
+
+        // The calls below return data instead of an auto-submitting HTML page.
+
+        /** Signed IPCPurchase fields and the URL to POST them to. */
+        purchaseForm: (params) => new CheckoutPurchaseRequest(mypos, params).form(),
+
+        /** IPCGetPaymentStatus, sent server-to-server. Resolves with the parsed reply. */
+        paymentStatus: (params, options) => new GetPaymentStatusRequest(mypos, params).post(options),
+
+        /** IPCRefund, sent server-to-server. Resolves with the parsed reply. */
+        refundPayment: (params, options) => new CheckoutRefundRequest(mypos, params).post(options),
+
+        /** IPCReversal, sent server-to-server. Resolves with the parsed reply. */
+        reversePayment: (params, options) => new CheckoutReversalRequest(mypos, params).post(options),
+
+        /**
+         * Verify a signature from myPOS (IPCPurchaseNotify, IPCPurchaseOK, or a
+         * server-to-server reply). Uses checkout.publicCertificate unless one
+         * is passed.
+         */
+        verifySignature: (data, publicCertificate) =>
+            signature.verify(data, publicCertificate || (mypos.config.checkout || {}).publicCertificate),
     };
 
     mypos.devices = {

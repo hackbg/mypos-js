@@ -1,31 +1,42 @@
 {
-  "name": "@mypos-ltd/mypos",
-  "version": "0.0.5",
-  "description": "This repository provides a native NodeJS SDK, which enables to integrate your solution with myPOS APIs such as Checkout, Transactions, Devices, Webhooks and more to come.",
+  "name": "@hackbg/mypos-js",
+  "version": "0.1.0",
+  "description": "NodeJS SDK for the myPOS APIs: Checkout, Transactions, Devices and Webhooks. Maintained fork of developermypos/mypos-js.",
   "main": "mypos.js",
-  "scripts": {},
+  "types": "index.d.ts",
+  "files": [
+    "mypos.js",
+    "resources.js",
+    "resources",
+    "utils",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
   "keywords": [
     "mypos"
   ],
   "author": "myPOS",
+  "contributors": [
+    "Hack.bg"
+  ],
   "license": "ISC",
+  "engines": {
+    "node": ">=18.17"
+  },
   "dependencies": {
-    "enum": "^2.5.0",
-    "net": "^1.0.2",
-    "@cypress/request": "^3.0.0",
-    "uuid": "^3.3.3",
-    "node-rsa": "^1.0.6"
+    "@cypress/request": "^3.0.0"
   },
   "directories": {
     "example": "examples"
   },
-  "devDependencies": {},
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/developermypos/mypos-js.git"
+    "url": "git+https://github.com/hackbg/mypos-js.git"
   },
   "bugs": {
-    "url": "https://github.com/developermypos/mypos-js/issues"
+    "url": "https://github.com/hackbg/mypos-js/issues"
   },
-  "homepage": "https://github.com/developermypos/mypos-js#readme"
+  "homepage": "https://github.com/hackbg/mypos-js#readme"
 }
