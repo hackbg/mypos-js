@@ -103,7 +103,7 @@ app.post('/notify', express.urlencoded({ extended: false }), (req, res) => {
 
 **Deciding whether an order was paid.** In production, check `PaymentStatus === "1"` *and* that `OrderID`, `Amount` and `Currency` match the order, and verify the reply's signature (`paymentStatus({ orderId }, { verifySignature: true })`, or `verifySignature(Object.entries(reply))`). Do not rely on `StatusMsg === 'Success'` or on `Status`.
 
-**The sandbox reports every order as paid.** In the test environment `IPCGetPaymentStatus` answers `PaymentStatus: "1"`, `StatusMsg: "Success"` with a valid myPOS signature and the requested `OrderID` echoed back, for *any* order: one myPOS has never seen, a checkout that was handed off and abandoned, and a payment the hosted page itself declared unsuccessful. The `Amount` is a random whole number (observed 2.00 to 19.00 EUR), different on every call. So in the sandbox:
+**The sandbox reports every order as paid.** In the test environment `IPCGetPaymentStatus` answers `PaymentStatus: "1"`, `StatusMsg: "Success"` with a valid myPOS signature and the requested `OrderID` echoed back, for *any* order: one myPOS has never seen, a checkout that was handed off and abandoned, and a payment the hosted page itself declared unsuccessful. The `Amount` is a random whole number (observed 1.00 to 19.00 EUR), different on every call. So in the sandbox:
 
 - signature, `OrderID`, `Currency` and `PaymentStatus` checks all pass for an unpaid order;
 - only the amount check catches it, and only probabilistically: anyone who can make your server repeat the status query can retry until the random amount matches a small order;
