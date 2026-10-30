@@ -101,7 +101,15 @@ app.post('/notify', express.urlencoded({ extended: false }), (req, res) => {
 });
 ```
 
-**Deciding whether an order was paid.** In production, check `PaymentStatus === "1"` *and* that `OrderID`, `Amount` and `Currency` match the order, and verify the reply's signature (`paymentStatus({ orderId }, { verifySignature: true })`, or `verifySignature(Object.entries(reply))`). Do not rely on `StatusMsg === 'Success'` or on `Status`.
+**Deciding whether an order was paid.** Check that `PaymentStatus` is 1 *and* that `OrderID`, `Amount` and `Currency` match your own record of the order, and verify the reply's signature (`paymentStatus({ orderId }, { verifySignature: true })`, or `verifySignature(reply)`). Do not rely on `StatusMsg === 'Success'` or on `Status`. Observed in production (2026-10-30):
+
+| Order | `Status` / `StatusMsg` | `PaymentStatus` |
+|---|---|---|
+| paid | `0` / `"Success"` | `1`, with a `PaymentReference` |
+| handed to the hosted page, never paid | `0` / `"Success"` | `2`, empty `PaymentReference` |
+| unknown to myPOS | `3` / `"No data found"` | absent |
+
+So `StatusMsg` says `"Success"` for an order that was never paid. Production sends numbers (`PaymentStatus: 1`, `Amount: 35`) where the sandbox sends strings (`"1"`, `"35.00"`): compare amounts in cents, not as strings.
 
 **The sandbox reports every order as paid.** In the test environment `IPCGetPaymentStatus` answers `PaymentStatus: "1"`, `StatusMsg: "Success"` with a valid myPOS signature and the requested `OrderID` echoed back, for *any* order: one myPOS has never seen, a checkout that was handed off and abandoned, and a payment the hosted page itself declared unsuccessful. The `Amount` is a random whole number (observed 1.00 to 19.00 EUR), different on every call. So in the sandbox:
 
@@ -109,7 +117,7 @@ app.post('/notify', express.urlencoded({ extended: false }), (req, res) => {
 - only the amount check catches it, and only probabilistically: anyone who can make your server repeat the status query can retry until the random amount matches a small order;
 - a sandbox status reply is therefore never evidence of payment. Do not let anything that settles orders trust it while `isSandbox` is on, and do not use the sandbox to test your "not paid" path through this call.
 
-(Observed 2026-10-30 with the public test store. Production behaviour for unknown or unpaid orders was not tested.) The signed `IPCPurchaseNotify` callback to `URL_Notify` is the stronger settlement signal: myPOS sends it for completed payments, and a payment fails if that URL does not answer `OK`.
+(Observed 2026-10-30 with the public test store.) The signed `IPCPurchaseNotify` callback to `URL_Notify` is the stronger settlement signal: myPOS sends it for completed payments, and a payment fails if that URL does not answer `OK`.
 
 **What `verifySignature` proves.** myPOS signs the field *values* only, in order, joined with `-`. Field names and the message type are not signed, so a valid signature proves that myPOS produced this sequence of values at some point, nothing more. In particular:
 

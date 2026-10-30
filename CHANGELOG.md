@@ -15,8 +15,9 @@ Maintained fork of developermypos/mypos-js 0.0.5.
   certificate.
 - `{ verifySignature: true }` option on the server-to-server calls: rejects a
   reply whose signature does not verify against `checkout.publicCertificate`.
-- README: what `verifySignature` does and does not prove, and how the sandbox's
-  `IPCGetPaymentStatus` reports any order as paid.
+- README: what `verifySignature` does and does not prove, how the sandbox's
+  `IPCGetPaymentStatus` reports any order as paid, and what production answers
+  for paid, abandoned and unknown orders.
 - TypeScript declarations (`index.d.ts`) and a test suite (`npm test`).
 
 ### Fixed
@@ -46,6 +47,8 @@ Maintained fork of developermypos/mypos-js 0.0.5.
   `Content-Type` when written to a response.
 
 ### Changed
+- Types: `verifySignature` accepts `Object.entries(reply)` (values typed
+  `unknown`), and reply envelopes type `IPCMethod`, as myPOS spells it.
 - Signing uses Node's `crypto` instead of `node-rsa`. Signatures are identical
   (RSA-SHA256, PKCS#1 v1.5).
 - Dependencies reduced to `@cypress/request`. Removed `node-rsa`, `uuid`,

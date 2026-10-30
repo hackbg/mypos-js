@@ -114,7 +114,8 @@ declare namespace MyPos {
 
   /** The common envelope of a Checkout API reply. Status 0 means success. */
   interface CheckoutReply {
-    IPCmethod?: string
+    /** Replies spell it IPCMethod; requests send IPCmethod. */
+    IPCMethod?: string
     Status: number | string
     StatusMsg?: string
     Signature?: string
@@ -159,7 +160,10 @@ declare namespace MyPos {
       refundPayment(params: RefundParams, options?: RequestOptions): Promise<RefundReply>
       reversePayment(params: ReversalParams, options?: RequestOptions): Promise<CheckoutReply>
       /** Verify a signature from myPOS against checkout.publicCertificate, or the one given. */
-      verifySignature(data: Record<string, unknown> | Field[], publicCertificate?: string): boolean
+      verifySignature(
+        data: Record<string, unknown> | ReadonlyArray<readonly [string, unknown]>,
+        publicCertificate?: string
+      ): boolean
     }
     transactions: {
       list(params: Record<string, unknown>, callback: Callback): void
